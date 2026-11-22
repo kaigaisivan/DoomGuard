@@ -1,6 +1,6 @@
 # DoomGuard
 
-[![Build](https://github.com/YOUR_USERNAME/DoomGuard/actions/workflows/build.yml/badge.svg)](https://github.com/YOUR_USERNAME/DoomGuard/actions/workflows/build.yml)
+[![Build](https://github.com/kaigaisivan/DoomGuard/actions/workflows/build.yml/badge.svg)](https://github.com/kaigaisivan/DoomGuard/actions/workflows/build.yml)
 ![Platform](https://img.shields.io/badge/platform-Android%208%2B-3DDC84)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF)
 ![UI](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
