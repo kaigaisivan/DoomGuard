@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DoomGuard privacy</title>
+<style>
+:root{--bg:#14161b;--text:#eef0f4;--muted:#9aa3b2;--gold:#e8b96a}
+@media (prefers-color-scheme: light){:root{--bg:#f7f5f0;--text:#1b1d22;--muted:#5d6574;--gold:#c98f2a}}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.7 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:40px 20px 64px}
+h1{margin:0 0 6px}h2{margin-top:28px;font-size:1.2rem;color:var(--gold)}
+p,li{color:var(--muted)}a{color:var(--gold)}
+</style>
+</head>
+<body>
+<main>
+<h1>Privacy</h1>
+<p>Last updated 23 November 2026.</p>
+
+<h2>Short version</h2>
+<p>DoomGuard does not collect, send or sell your data. There are no accounts, no servers, no analytics and no ads. Everything it records stays on your phone.</p>
+
+<h2>What stays on your phone</h2>
+<ul>
+<li>Your limits and settings, your activity log and intentions, your usage history, and the guardian log.</li>
+<li>The guardian PIN, stored only as a salted hash. It is never included in backups.</li>
+<li>Backups you export, or the weekly backup to a folder you choose. These are files on your own device or storage.</li>
+</ul>
+
+<h2>Permissions and why</h2>
+<ul>
+<li><strong>Usage access:</strong> to see how long each app has been open, so limits can be enforced and shown.</li>
+<li><strong>Display over other apps:</strong> to show the pause screen on top of an app that has reached its limit.</li>
+<li><strong>Notifications and foreground service:</strong> to keep the monitor running and show warnings.</li>
+<li><strong>VPN (website filter):</strong> a local-only filter that answers site-name lookups on the phone. Only lookups are handled. Your browsing does not pass through DoomGuard, and nothing is logged beyond counts of blocked attempts. Lookups for allowed sites are passed to your normal DNS server, just as they would be without the app.</li>
+<li><strong>Internet:</strong> used only by that filter to pass allowed lookups on.</li>
+<li><strong>Device administrator:</strong> optional. It only stops DoomGuard from being uninstalled without a visible step. It grants no other powers.</li>
+</ul>
+
+<h2>Third parties</h2>
+<p>None receive your data. The adult-site list is bundled in the app and was derived from the open-source <a href="https://github.com/StevenBlack/hosts">StevenBlack/hosts</a> project (MIT licence). The app does not download updates to it.</p>
+
+<h2>Children</h2>
+<p>If a parent or guardian sets this up for a young person, the guardian log on that phone shows events such as overrides and permission changes to anyone who holds the phone. Tell the person using it what is recorded.</p>
+
+<h2>Contact</h2>
+<p>Questions or problems: open an issue at <a href="https://github.com/kaigaisivan/DoomGuard/issues">github.com/kaigaisivan/DoomGuard</a>.</p>
+</main>
+</body>
+</html>
