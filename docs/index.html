@@ -3,98 +3,273 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DoomGuard: stop doom scrolling</title>
-<meta name="description" content="An Android app that limits doom scrolling with per-app limits, a reflective pause screen, a guardian PIN and an adult-site filter. Free, no accounts, all data stays on your phone.">
+<title>DoomGuard: an Android app that stops doom scrolling</title>
+<meta name="description" content="Set a daily limit for the apps that eat your day. When time is up, DoomGuard covers the app with a short pause. Free for Android, no account, and your data never leaves the phone.">
+<link rel="canonical" href="https://kaigaisivan.github.io/DoomGuard/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DoomGuard: stop scrolling when you said you would">
+<meta property="og:description" content="Daily limits, a pause that makes you think, and a guardian PIN. Free for Android, no account, no tracking.">
+<meta property="og:url" content="https://kaigaisivan.github.io/DoomGuard/">
+<meta property="og:image" content="https://kaigaisivan.github.io/DoomGuard/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eaf2f4">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"DoomGuard","operatingSystem":"Android 8.0+","applicationCategory":"LifestyleApplication","description":"An Android app that limits doom scrolling with per-app limits, a reflective pause screen, a guardian PIN and an adult-site filter.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"https://kaigaisivan.github.io/DoomGuard/","downloadUrl":"https://github.com/kaigaisivan/DoomGuard/releases/latest/download/DoomGuard.apk"}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#14161b;--card:#1e2128;--line:#2c313b;--text:#eef0f4;--muted:#9aa3b2;--gold:#e8b96a;--goldtext:#2a1d05}
-@media (prefers-color-scheme: light){:root{--bg:#f7f5f0;--card:#fff;--line:#e4dfd3;--text:#1b1d22;--muted:#5d6574;--gold:#c98f2a;--goldtext:#fff}}
+:root{
+  --mist:#eaf2f4; --white:#ffffff; --ink:#0e2a33; --ink2:#425c66;
+  --teal:#14505b; --teal-deep:#0c3a43; --sun:#f5b83d; --sun-deep:#d99a1a; --limit:#e4574b;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:980px;margin:0 auto;padding:0 20px}
-header{padding:56px 0 24px;text-align:center}
-h1{font-size:clamp(2.2rem,6vw,3.4rem);line-height:1.1;margin:0 0 12px}
-.lead{font-size:1.2rem;color:var(--muted);max-width:640px;margin:0 auto 28px}
-.btn{display:inline-block;background:var(--gold);color:var(--goldtext);font-weight:700;padding:14px 28px;border-radius:999px;text-decoration:none}
-.btn.ghost{background:none;color:var(--gold);border:1px solid var(--gold);margin-left:8px}
-.meta{color:var(--muted);font-size:.9rem;margin-top:14px}
-.shots{display:flex;gap:14px;overflow-x:auto;padding:28px 20px;scroll-snap-type:x mandatory;margin:0 -20px}
-.shots img{height:440px;width:auto;border-radius:18px;border:1px solid var(--line);scroll-snap-align:center;flex:none}
-section{padding:28px 0}
-h2{font-size:1.6rem;margin:0 0 14px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
-.card h3{margin:0 0 6px;font-size:1.05rem;color:var(--gold)}
-.card p{margin:0;color:var(--muted)}
-ol{padding-left:1.2rem}li{margin:8px 0}
-.note{background:var(--card);border-left:4px solid var(--gold);border-radius:8px;padding:14px 16px;color:var(--muted)}
-code{background:var(--card);border:1px solid var(--line);padding:2px 6px;border-radius:6px;word-break:break-all;font-size:.85rem}
-footer{border-top:1px solid var(--line);margin-top:32px;padding:24px 0 48px;color:var(--muted);font-size:.9rem;text-align:center}
-a{color:var(--gold)}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--mist);color:var(--ink);font:400 1.0625rem/1.65 var(--body)}
+img{max-width:100%;display:block}
+a{color:var(--teal);text-underline-offset:3px}
+a:focus-visible,summary:focus-visible,.btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:1.05;letter-spacing:-.02em;margin:0}
+h1{font-size:clamp(2.6rem,7vw,4.6rem)}
+h2{font-size:clamp(1.9rem,4.4vw,2.9rem);margin-bottom:16px}
+h3{font-size:1.25rem;font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+p{margin:0 0 14px;max-width:62ch}
+
+/* Buttons */
+.btn{display:inline-block;font:600 1.05rem var(--body);text-decoration:none;padding:15px 30px;border-radius:999px;background:var(--sun);color:var(--ink);transition:transform .15s,background .15s}
+.btn:hover{background:var(--sun-deep);transform:translateY(-2px)}
+.btn.plain{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.btn.plain:hover{background:var(--ink);color:var(--mist)}
+.fine{color:var(--ink2);font-size:.95rem;margin:16px 0 0}
+
+/* Hero */
+.hero{padding:48px 0 72px}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.hero p.lead{font-size:1.25rem;margin:20px 0 28px;color:var(--ink2)}
+.actions{display:flex;flex-wrap:wrap;gap:12px}
+
+/* Live pause screen, the app's signature moment */
+.phone{width:min(300px,100%);margin:0 auto;border:9px solid var(--ink);border-radius:42px;background:#14171c;color:#eef0f4;overflow:hidden;box-shadow:0 30px 60px -28px rgba(14,42,51,.55)}
+.phone img{width:100%}
+.live{padding:44px 22px 26px;text-align:center;min-height:560px;display:flex;flex-direction:column;align-items:center}
+.live h2{font-family:var(--display);font-size:1.5rem;font-weight:700;letter-spacing:-.01em;margin:0 0 4px;color:#fff}
+.live .sub{color:#aab3c0;font-size:.9rem;margin:0}
+.ring{margin:34px 0 28px;width:150px;height:150px;border-radius:50%;background:#3d4f4f;display:grid;place-items:center;animation:breathe 8s ease-in-out infinite}
+.ring span{grid-area:1/1;font-size:.95rem;color:#e6efee}
+.ring .in{animation:fadeIn 8s infinite}
+.ring .out{animation:fadeOut 8s infinite}
+@keyframes breathe{0%,100%{transform:scale(.72)}50%{transform:scale(1)}}
+@keyframes fadeIn{0%,45%{opacity:1}50%,95%{opacity:0}100%{opacity:1}}
+@keyframes fadeOut{0%,45%{opacity:0}50%,95%{opacity:1}100%{opacity:0}}
+.live blockquote{margin:0 0 20px;font:italic 1.02rem/1.5 Georgia,"Times New Roman",serif;color:#f2f4f8}
+.live blockquote cite{display:block;margin-top:8px;font:normal .85rem var(--body);color:var(--sun)}
+.live .try{width:100%;background:#1f232b;border-radius:14px;padding:12px 14px;text-align:left;margin-bottom:14px}
+.live .try small{display:block;color:var(--sun);font-size:.78rem}
+.live .go{width:100%;background:var(--sun);color:#2a1d05;font-weight:600;border-radius:999px;padding:12px;font-size:.95rem}
+@media (prefers-reduced-motion:reduce){.ring,.ring .in,.ring .out{animation:none}.ring{transform:scale(.9)}.ring .in{opacity:0}.ring .out{opacity:1}}
+
+/* Sequence of three real screens */
+.seq{padding:24px 0 72px}
+.seq .intro{max-width:640px;margin-bottom:36px}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;align-items:start}
+.trio .phone{width:100%;max-width:300px}
+.trio figure{margin:0}
+.trio figcaption{margin-top:16px}
+.trio figure:nth-child(2){margin-top:36px}
+
+/* One loud band */
+.band{background:var(--teal-deep);color:#e9f2f3;padding:88px 0}
+.band .wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.band blockquote{margin:0;font:700 clamp(2rem,4.6vw,3.2rem)/1.12 var(--display);letter-spacing:-.02em;color:#fff}
+.band blockquote cite{display:block;margin-top:18px;font:500 1rem var(--body);letter-spacing:0;color:var(--sun)}
+.band p{color:#c6dadd}
+.band h2{color:#fff;font-size:clamp(1.6rem,3.4vw,2.2rem)}
+
+/* Feature rows */
+.row{padding:80px 0}
+.row .wrap{display:grid;grid-template-columns:.85fr 1.15fr;gap:56px;align-items:center}
+.row.flip .wrap{grid-template-columns:1.15fr .85fr}
+.row.flip .phone{order:2}
+.row.flip .words{order:1}
+.words ul{padding:0;margin:18px 0 0;list-style:none}
+.words li{padding:10px 0 10px 28px;position:relative}
+.words li::before{content:"";position:absolute;left:0;top:19px;width:12px;height:12px;border-radius:50%;background:var(--sun)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pair .phone:nth-child(2){margin-top:44px}
+
+/* Install */
+.install{background:var(--white);padding:80px 0}
+.install .wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px}
+ol.steps{margin:18px 0 0;padding-left:1.3rem}
+ol.steps li{padding:6px 0 6px 6px}
+details{border-bottom:1px solid #d3e0e3;padding:14px 0}
+details:first-of-type{border-top:1px solid #d3e0e3}
+summary{cursor:pointer;font:700 1.1rem var(--display);list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font:600 1.4rem/1 var(--body);color:var(--teal)}
+details[open] summary::after{content:"\2212"}
+details p{margin:10px 0 0;color:var(--ink2)}
+
+.limits{padding:72px 0}
+.limits p{font-size:1.1rem}
+.cta{padding:24px 0 88px;text-align:left}
+.cta h2{margin-bottom:22px}
+footer{background:var(--ink);color:#b9ccd2;padding:36px 0;font-size:.95rem}
+footer a{color:#fff}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between}
+footer p{margin:0;max-width:none}
+
+@media (max-width:860px){
+  .hero .wrap,.band .wrap,.row .wrap,.row.flip .wrap,.install .wrap{grid-template-columns:1fr;gap:36px}
+  .row.flip .phone,.row.flip .words{order:0}
+  .hero{padding-top:28px}
+  .trio{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:18px;padding-bottom:12px;margin:0 -24px;padding-left:24px;padding-right:24px}
+  .trio figure{flex:0 0 74%;scroll-snap-align:center}
+  .trio figure:nth-child(2){margin-top:0}
+  .pair{grid-template-columns:1fr 1fr;gap:12px}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-<header>
-  <h1>DoomGuard</h1>
-  <p class="lead">Stop doom scrolling. Set a daily limit for the apps that drain you. When time is up, a pause screen makes carrying on deliberately hard.</p>
-  <a class="btn" href="https://github.com/kaigaisivan/DoomGuard/releases/latest">Download for Android</a>
-  <a class="btn ghost" href="https://github.com/kaigaisivan/DoomGuard">View the code</a>
-  <p class="meta">Free · Android 8.0 or newer · No account, no ads, no tracking</p>
-</header>
-</div>
 
-<div class="wrap">
-  <div class="shots" aria-label="App screenshots">
-    <img src="screenshots/today.png" alt="Today screen" loading="lazy">
-    <img src="screenshots/pause.png" alt="Pause screen" loading="lazy">
-    <img src="screenshots/apps.png" alt="Apps and limits" loading="lazy">
-    <img src="screenshots/insights.png" alt="Insights" loading="lazy">
-    <img src="screenshots/filter.png" alt="Website filter" loading="lazy">
-    <img src="screenshots/guardian.png" alt="Guardian log" loading="lazy">
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <h1>Stop scrolling when you said you would.</h1>
+      <p class="lead">DoomGuard puts a daily limit on the apps that eat your day. When the time is up, it covers the app with a short pause instead of letting you slide into another hour.</p>
+      <div class="actions">
+        <a class="btn" href="https://github.com/kaigaisivan/DoomGuard/releases/latest/download/DoomGuard.apk">Download for Android</a>
+        <a class="btn plain" href="#install">How to install</a>
+      </div>
+      <p class="fine">Free, for Android 8 and newer. No account, no ads. Everything stays on your phone.</p>
+    </div>
+
+    <div class="phone" role="img" aria-label="The DoomGuard pause screen: a breathing circle, a quote and a button to close the app">
+      <div class="live">
+        <h2>Instagram is paused</h2>
+        <p class="sub">You've used your 30 minutes today.</p>
+        <div class="ring"><span class="in">Breathe in</span><span class="out">Breathe out</span></div>
+        <blockquote>“While we are postponing, life speeds by.”<cite>Seneca</cite></blockquote>
+        <div class="try"><small>Instead, try</small>Write down what you're avoiding</div>
+        <div class="go">Close it and go home</div>
+      </div>
+    </div>
   </div>
+</header>
 
-  <section>
-    <h2>What it does</h2>
-    <div class="grid">
-      <div class="card"><h3>Limits that bite</h3><p>Daily limits per app, weekend limits, and a shared daily cap across all of them.</p></div>
-      <div class="card"><h3>A pause that makes you think</h3><p>A breathing circle, a quote about the choice you are making, and a better idea, before any extra time.</p></div>
-      <div class="card"><h3>Guardian PIN</h3><p>Someone you trust holds a PIN that gates every change that loosens your rules. Overrides are logged.</p></div>
-      <div class="card"><h3>Website filter</h3><p>Blocks adult sites in every browser and app using a private on-phone filter. Nothing leaves your phone.</p></div>
-      <div class="card"><h3>See where your time goes</h3><p>Today, a 7-day chart, top apps, pickups and what triggers your scrolling.</p></div>
-      <div class="card"><h3>Private by design</h3><p>No servers, no accounts, no analytics. All data stays on your phone.</p></div>
+<main>
+<section class="seq" aria-labelledby="how">
+  <div class="wrap">
+    <div class="intro">
+      <h2 id="how">Pick the apps. Set the time. Let it step in.</h2>
+      <p>You choose which apps drain you and how long each gets. DoomGuard watches the clock so you don't have to.</p>
     </div>
-  </section>
-
-  <section>
-    <h2>Install</h2>
-    <ol>
-      <li>On your phone, open the <a href="https://github.com/kaigaisivan/DoomGuard/releases/latest">latest release</a> and download <code>DoomGuard.apk</code>.</li>
-      <li>Open the file. If Android asks, allow installs from your browser or file manager ("Install unknown apps"). Play Protect may show a warning because the app is not from the Play Store. Choose to install anyway.</li>
-      <li>Open DoomGuard and grant <strong>Usage access</strong> and <strong>Display over other apps</strong> when it asks.</li>
-      <li>Pick the apps to limit and set their daily time.</li>
-      <li>Optional: set a guardian PIN (ask someone you trust to choose it) and switch on the website filter.</li>
-    </ol>
-    <p class="note"><strong>Check your download.</strong> The release notes list a SHA-256 checksum. Compare it with the file you downloaded to make sure nothing was changed on the way.</p>
-  </section>
-
-  <section>
-    <h2>Keep it running</h2>
-    <div class="grid">
-      <div class="card"><h3>Xiaomi / Redmi / Poco</h3><p>In Settings, Apps, DoomGuard, turn on Autostart, set Battery saver to "No restrictions", and enable "Display pop-up windows while running in the background". Lock the app in recent apps.</p></div>
-      <div class="card"><h3>Samsung, Tecno, Infinix, Oppo</h3><p>Set DoomGuard's battery use to "Unrestricted" and allow auto-start so the system does not close it.</p></div>
-      <div class="card"><h3>For the website filter</h3><p>Set Android's Private DNS to Off or Automatic, and turn off "Use secure DNS" in Chrome. Browsers using their own secure DNS skip the filter.</p></div>
+    <div class="trio">
+      <figure>
+        <div class="phone"><img src="screenshots/apps.png" alt="Apps screen with a switch and a daily time for each app" loading="lazy"></div>
+        <figcaption><h3>Choose your apps</h3><p>Turn on the ones you want limited and set minutes per day, with different limits for weekends.</p></figcaption>
+      </figure>
+      <figure>
+        <div class="phone"><img src="screenshots/today.png" alt="Today screen with a quote and a focus session" loading="lazy"></div>
+        <figcaption><h3>Go about your day</h3><p>Start a focus session, or glance at where your time went. A warning arrives before you hit the limit.</p></figcaption>
+      </figure>
+      <figure>
+        <div class="phone"><img src="screenshots/pause.png" alt="Pause screen shown over a locked app" loading="lazy"></div>
+        <figcaption><h3>Meet the pause</h3><p>A breathing circle, a thought about the choice you're making, and something better to do.</p></figcaption>
+      </figure>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section>
-    <h2>Honest limits</h2>
-    <p class="note">DoomGuard is a speed bump you choose, not a lock. Android does not let any app stop someone from force-stopping it, revoking its permissions or clearing its data. DoomGuard records those events in the guardian log instead. It cannot see cloned apps made by "Dual apps" or "Second space", and only one VPN can run at a time, which matters if you use another VPN app.</p>
-  </section>
+<section class="band">
+  <div class="wrap">
+    <blockquote>“How we spend our days is, of course, how we spend our lives.”<cite>Annie Dillard</cite></blockquote>
+    <div>
+      <h2>A pause built to make you think</h2>
+      <p>Every pause screen shows a line chosen to question the habit, not to scold you. Extra time is possible, but it comes in small pieces, with a wait before each one, and then the app locks for the day.</p>
+    </div>
+  </div>
+</section>
 
-  <footer>
-    <p><a href="privacy.html">Privacy</a> · <a href="https://github.com/kaigaisivan/DoomGuard">Source on GitHub</a> · <a href="https://github.com/kaigaisivan/DoomGuard/issues">Report a problem</a></p>
-    <p>Website blocklist derived from <a href="https://github.com/StevenBlack/hosts">StevenBlack/hosts</a> (MIT licence).</p>
-  </footer>
-</div>
+<section class="row">
+  <div class="wrap">
+    <div class="phone"><img src="screenshots/guardian.png" alt="Guardian log listing overrides and permission changes" loading="lazy"></div>
+    <div class="words">
+      <h2>Give the PIN to someone you trust</h2>
+      <p>Limits are easy to talk yourself out of. With a guardian PIN, every change that loosens them needs the person who holds it: raising a limit, ending a session early, or switching the filter off.</p>
+      <ul>
+        <li>Overrides and permission changes are written to a log you can read.</li>
+        <li>Optional uninstall protection stops the app being removed on a whim.</li>
+        <li>A few emergency exits a day, for calls and things that can't wait.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="row flip" style="background:var(--white)">
+  <div class="wrap">
+    <div class="pair">
+      <div class="phone"><img src="screenshots/filter.png" alt="Website filter settings" loading="lazy"></div>
+      <div class="phone"><img src="screenshots/insights.png" alt="Weekly screen time chart and top apps" loading="lazy"></div>
+    </div>
+    <div class="words">
+      <h2>Block sites. See the week.</h2>
+      <p>The website filter blocks adult sites in every browser and app, plus any site you add. It works with a private on-phone filter, so your browsing goes nowhere else.</p>
+      <p>Insights show a seven-day chart, your top apps and what usually sets you off, so you can see the pattern before you try to change it.</p>
+    </div>
+  </div>
+</section>
+
+<section class="install" id="install">
+  <div class="wrap">
+    <div>
+      <h2>Install it in five steps</h2>
+      <ol class="steps">
+        <li>Tap <a href="https://github.com/kaigaisivan/DoomGuard/releases/latest/download/DoomGuard.apk">Download for Android</a> on your phone.</li>
+        <li>Open the file. Allow "Install unknown apps" if Android asks. If Play Protect warns you, choose "Install anyway", because the app isn't from the Play Store.</li>
+        <li>Open DoomGuard and allow Usage access and Display over other apps.</li>
+        <li>Choose the apps to limit and set their daily time.</li>
+        <li>Optional: ask someone you trust to set the guardian PIN, and switch on the website filter.</li>
+      </ol>
+      <p class="fine">Want to check the file? The <a href="https://github.com/kaigaisivan/DoomGuard/releases/latest">release page</a> lists its SHA-256 checksum.</p>
+    </div>
+    <div>
+      <h2>Keep it running</h2>
+      <p>Some phones close background apps to save battery. Set these once so limits keep working.</p>
+      <details open><summary>Xiaomi, Redmi, Poco</summary>
+        <p>Open Settings, Apps, DoomGuard. Turn on Autostart, set Battery saver to "No restrictions", and allow "Display pop-up windows while running in the background". Then lock DoomGuard in the recent apps list.</p></details>
+      <details><summary>Samsung, Tecno, Infinix, Oppo</summary>
+        <p>Set DoomGuard's battery use to "Unrestricted" and allow it to start automatically.</p></details>
+      <details><summary>For the website filter</summary>
+        <p>Set Android's Private DNS to Off or Automatic, and turn off "Use secure DNS" in Chrome. A browser that uses its own secure DNS skips the filter.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="limits">
+  <div class="wrap">
+    <h2>What it can't do</h2>
+    <p>DoomGuard is a speed bump you choose, not a lock. Android doesn't let any app stop someone from force-stopping it, revoking its permissions or clearing its data, so DoomGuard records those events in the guardian log instead. It can't see cloned apps from "Dual apps" or "Second space", and only one VPN can run at a time, which matters if you already use a VPN app.</p>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <h2>Take your time back.</h2>
+    <a class="btn" href="https://github.com/kaigaisivan/DoomGuard/releases/latest/download/DoomGuard.apk">Download for Android</a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><a href="privacy.html">Privacy</a> &nbsp; <a href="https://github.com/kaigaisivan/DoomGuard">Source code</a> &nbsp; <a href="https://github.com/kaigaisivan/DoomGuard/issues">Report a problem</a></p>
+    <p>Adult-site list derived from <a href="https://github.com/StevenBlack/hosts">StevenBlack/hosts</a> under the MIT licence.</p>
+  </div>
+</footer>
 </body>
 </html>
