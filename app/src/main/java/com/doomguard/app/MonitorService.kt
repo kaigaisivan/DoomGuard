@@ -27,7 +27,6 @@ import java.time.LocalTime
  *  - LOCKED:  the app is cooling down after too many extensions
  *  - FOCUS:   inside the scheduled focus hours
  *  - LIMIT:   the daily limit is used up
- *  - INTENT:  the app was just opened (the "what are you here for?" pause)
  */
 class MonitorService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -35,8 +34,6 @@ class MonitorService : Service() {
     private var started = false
     private var lastLaunch = 0L
     private var lastRecord = 0L
-    private var lastFg: String? = null
-    private var seeded = false
     private val essentials: Set<String> by lazy { Essentials.defaults(this) }
     private var lastUsageOk: Boolean? = null
     private var lastOverlayOk: Boolean? = null
@@ -128,19 +125,14 @@ class MonitorService : Service() {
         val t = tracker ?: UsageTracker(this).also { tracker = it }
         t.refresh(now)
 
-        // Did the foreground app just change? (The first tick only records the starting point.)
         val fg = t.foreground
-        val changed = seeded && fg != lastFg
-        lastFg = fg
-        seeded = true
 
-        maybeQuote(now)
         maybeEvening()
         Store.finishFocusIfDue(now)?.let { mins ->
             Notifier.post(
                 this, 2003, Notifier.CH_QUOTE,
                 "Focus session complete",
-                "Nice work. $mins minutes were added to your activity log."
+                "Nice work. You stayed with it for $mins minutes."
             )
         }
 
@@ -151,7 +143,7 @@ class MonitorService : Service() {
             Store.recordUsage(today(), t.snapshotAll(now) + t.snapshot(now, limits.keys))
             Store.recordUnlocks(today(), t.stats.unlocks, t.stats.firstUnlock)
             StatusWidget.refresh(this)
-            AutoBackup.runIfDue(this)
+            UpdateChecker.runIfDue(this)
         }
 
         if (fg == null) return
@@ -182,15 +174,14 @@ class MonitorService : Service() {
             if (!s.warned && used >= limitMs * 0.8 && used < limitMs) {
                 s.warned = true
                 Store.savePkgState(fg, s)
-                val q = Quotes.pick("reflection", null)
                 Notifier.post(
                     this, fg.hashCode(), Notifier.CH_NUDGE,
                     "${appLabel(this, fg)}: ${fmtDuration(limitMs - used)} left today",
-                    "You've used ${fmtDuration(used)} of your ${fmtMinutes(limitMin)} limit. Start wrapping up.\n\n“${q.text}” — ${q.author}"
+                    "You've used ${fmtDuration(used)} of your ${fmtMinutes(limitMin)} limit. Start wrapping up."
                 )
             }
-            // Nothing is blocking, but the app was just opened: ask what it's for.
-            if (changed && Store.openPause && s.okUntil <= now) mode = "INTENT" else return
+            // Nothing is blocking. A limited app opens freely until its limit is reached.
+            return
         }
 
         if (mode == "LIMIT") Store.markOver(today())
@@ -216,7 +207,7 @@ class MonitorService : Service() {
             // hasn't appeared shortly after, fall back to a heads-up notification so the limit is never invisible.
             scope.launch {
                 delay(2500)
-                if (!BlockActivity.showing && mode != "INTENT") {
+                if (!BlockActivity.showing) {
                     val pi = PendingIntent.getActivity(this@MonitorService, pkg.hashCode(), i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                     Notifier.post(
                         this@MonitorService, pkg.hashCode(), Notifier.CH_NUDGE,
@@ -225,7 +216,7 @@ class MonitorService : Service() {
                     )
                 }
             }
-        } else if (mode != "INTENT") {
+        } else {
             val pi = PendingIntent.getActivity(this, pkg.hashCode(), i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             Notifier.post(
                 this, pkg.hashCode(), Notifier.CH_NUDGE,
@@ -233,17 +224,6 @@ class MonitorService : Service() {
                 "Tap to take a pause. (Grant 'Display over other apps' so this appears automatically.)", pi
             )
         }
-    }
-
-    private fun maybeQuote(now: Long) {
-        val interval = Store.quoteIntervalMin
-        if (interval <= 0) return
-        if (Store.lastQuoteAt == 0L) { Store.lastQuoteAt = now; return }
-        if (now - Store.lastQuoteAt < interval * 60_000L) return
-        Store.lastQuoteAt = now
-        val q = Quotes.pick(null, Store.currentQuote?.text)
-        Store.currentQuote = q
-        if (Store.quoteNotifs) Notifier.post(this, 2001, Notifier.CH_QUOTE, q.author, "“${q.text}”")
     }
 
     private fun maybeEvening() {
@@ -254,7 +234,7 @@ class MonitorService : Service() {
         Notifier.post(
             this, 2002, Notifier.CH_QUOTE,
             "Evening review",
-            "Log what you did today and answer one question: what are you proud of?"
+            "Take a minute to look back on today. What are you proud of?"
         )
     }
 

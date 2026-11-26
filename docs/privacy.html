@@ -15,16 +15,15 @@ p,li{color:var(--muted)}a{color:var(--gold)}
 <body>
 <main>
 <h1>Privacy</h1>
-<p>Last updated 23 November 2026.</p>
+<p>Last updated 25 November 2026.</p>
 
 <h2>Short version</h2>
 <p>DoomGuard does not collect, send or sell your data. There are no accounts, no servers, no analytics and no ads. Everything it records stays on your phone.</p>
 
 <h2>What stays on your phone</h2>
 <ul>
-<li>Your limits and settings, your activity log and intentions, your usage history, and the guardian log.</li>
-<li>The guardian PIN, stored only as a salted hash. It is never included in backups.</li>
-<li>Backups you export, or the weekly backup to a folder you choose. These are files on your own device or storage.</li>
+<li>Your limits and settings, your intentions and focus sessions, your usage history, and the guardian log (which you can clear with the PIN).</li>
+<li>The guardian PIN, stored only as a salted hash.</li>
 </ul>
 
 <h2>Permissions and why</h2>
@@ -33,9 +32,12 @@ p,li{color:var(--muted)}a{color:var(--gold)}
 <li><strong>Display over other apps:</strong> to show the pause screen on top of an app that has reached its limit.</li>
 <li><strong>Notifications and foreground service:</strong> to keep the monitor running and show warnings.</li>
 <li><strong>VPN (website filter):</strong> a local-only filter that answers site-name lookups on the phone. Only lookups are handled. Your browsing does not pass through DoomGuard, and nothing is logged beyond counts of blocked attempts. Lookups for allowed sites are passed to your normal DNS server, just as they would be without the app.</li>
-<li><strong>Internet:</strong> used only by that filter to pass allowed lookups on.</li>
+<li><strong>Internet:</strong> used by the website filter to pass allowed lookups on, and by an optional update check (see below).</li>
 <li><strong>Device administrator:</strong> optional. It only stops DoomGuard from being uninstalled without a visible step. It grants no other powers.</li>
 </ul>
+
+<h2>Update check</h2>
+<p>Once a day, unless you turn it off in Settings, DoomGuard asks GitHub's public releases page for the newest version number so it can tell you when an update is out. It sends nothing about you or your phone and never downloads or installs anything by itself. Like any website, GitHub can see the network address the request comes from.</p>
 
 <h2>Third parties</h2>
 <p>None receive your data. The adult-site list is bundled in the app and was derived from the open-source <a href="https://github.com/StevenBlack/hosts">StevenBlack/hosts</a> project (MIT licence). The app does not download updates to it.</p>
@@ -44,7 +46,7 @@ p,li{color:var(--muted)}a{color:var(--gold)}
 <p>If a parent or guardian sets this up for a young person, the guardian log on that phone shows events such as overrides and permission changes to anyone who holds the phone. Tell the person using it what is recorded.</p>
 
 <h2>Contact</h2>
-<p>Questions or problems: open an issue at <a href="https://github.com/kaigaisivan/DoomGuard/issues">github.com/kaigaisivan/DoomGuard</a>.</p>
+<p>Questions or problems: open an issue at <a href="https://github.com/kaigaisivan/DoomGuard/issues">github.com/kaigaisivan/DoomGuard</a>, message <a href="https://x.com/SimonSivan6">@SimonSivan6 on X</a>, or use the contact links on the <a href="index.html#contact">home page</a>.</p>
 </main>
 </body>
 </html>

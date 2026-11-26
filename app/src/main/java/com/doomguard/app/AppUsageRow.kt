@@ -22,9 +22,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 
-/** One line of the "All apps today" list: icon, name, time, a bar, and a Limit button if the app is unlimited. */
+/**
+ * One line of the "All apps today" list: icon, name, time and a bar. Unlimited apps get a Limit button; limited apps
+ * show their limit with an Unlimit button, which needs the guardian PIN if one is set and is refused in strict mode.
+ */
 @Composable
-fun AppUsageRow(pkg: String, ms: Long, fraction: Float, limitMin: Int?) {
+fun AppUsageRow(pkg: String, ms: Long, fraction: Float, limitMin: Int?, gate: GuardianGate) {
     val ctx = LocalContext.current
     val label = remember(pkg) { appLabel(ctx, pkg) }
     val icon = remember(pkg) {
@@ -45,7 +48,23 @@ fun AppUsageRow(pkg: String, ms: Long, fraction: Float, limitMin: Int?) {
             LinearProgressIndicator(progress = { fraction.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
         }
         if (limitMin != null) {
-            Text("Limit ${fmtMinutes(limitMin)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Column(horizontalAlignment = Alignment.End) {
+                Text("Limit ${fmtMinutes(limitMin)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                TextButton(onClick = {
+                    if (Store.strictActive()) {
+                        Toast.makeText(ctx, "Strict mode is on. Limits can't be removed right now.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        gate.run("Remove the limit on $label") {
+                            val done = Store.removeLimit(pkg)
+                            Toast.makeText(
+                                ctx,
+                                if (done) "$label is no longer limited." else "Couldn't remove the limit.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }) { Text("Unlimit") }
+            }
         } else if (Essentials.isProtected(ctx, pkg)) {
             Text("Always allowed", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
         } else {

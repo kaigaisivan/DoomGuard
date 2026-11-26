@@ -44,12 +44,6 @@ class WatchdogReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         Store.init(context)
         WebFilter.ensure(context) // brings the website filter back if it was stopped
-        if (AutoBackup.due()) {
-            val pending = goAsync()
-            Thread {
-                try { AutoBackup.runIfDue(context) } finally { pending.finish() }
-            }.start()
-        }
         if (!Store.monitoringEnabled && !Store.webFilterActive()) return
         if (Store.monitoringEnabled && Perms.hasUsage(context)) MonitorService.start(context)
         Watchdog.schedule(context)

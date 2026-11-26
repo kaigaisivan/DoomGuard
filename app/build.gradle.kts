@@ -12,8 +12,8 @@ android {
         applicationId = "com.doomguard.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
 
     buildTypes {
@@ -33,9 +33,9 @@ android {
         compose = true
     }
     lint {
-    checkReleaseBuilds = false
-    abortOnError = false
-}
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
 }
 
 dependencies {

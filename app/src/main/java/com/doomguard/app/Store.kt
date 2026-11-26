@@ -52,23 +52,14 @@ data class EventEntry(val ts: Long, val kind: String, val text: String)
 object Store {
     private lateinit var sp: SharedPreferences
 
-    /** Guardian secrets never go into backup files and survive a restore. */
-    private val GUARD_KEYS = setOf("gSalt", "gHash", "gFails", "gLock")
-
-    /** Kept as they are when a backup is restored, so a restore can't switch the website filter off or lose the backup folder. */
-    private val KEEP_ON_IMPORT = GUARD_KEYS + setOf("webOn", "webOffAt", "webCustom", "abOn", "abUri", "abLast")
-
     var version by mutableIntStateOf(0)
         private set
-
-    var currentQuote by mutableStateOf<Quote?>(null)
 
     @Synchronized
     fun init(ctx: Context) {
         if (!::sp.isInitialized) {
             sp = ctx.applicationContext.getSharedPreferences("doomguard", Context.MODE_PRIVATE)
             if (sp.getString("firstDay", null) == null) sp.edit().putString("firstDay", today()).apply()
-            currentQuote = Quotes.pick(null, null)
         }
     }
 
@@ -95,14 +86,6 @@ object Store {
         get() = sp.getInt("themeMode", 0)
         set(v) { sp.edit().putInt("themeMode", v.coerceIn(0, 2)).apply(); bump() }
 
-    var quoteIntervalMin: Int
-        get() = sp.getInt("quoteInterval", 60)
-        set(v) { sp.edit().putInt("quoteInterval", v).apply(); bump() }
-
-    var quoteNotifs: Boolean
-        get() = sp.getBoolean("quoteNotifs", true)
-        set(v) { sp.edit().putBoolean("quoteNotifs", v).apply(); bump() }
-
     var focusEnabled: Boolean
         get() = sp.getBoolean("focusOn", false)
         set(v) { sp.edit().putBoolean("focusOn", v).apply(); bump() }
@@ -123,10 +106,6 @@ object Store {
         get() = sp.getInt("eveHour", 21)
         set(v) { sp.edit().putInt("eveHour", ((v % 24) + 24) % 24).apply(); bump() }
 
-    var lastQuoteAt: Long
-        get() = sp.getLong("lastQuoteAt", 0)
-        set(v) { sp.edit().putLong("lastQuoteAt", v).apply() }
-
     var lastEveningDay: String
         get() = sp.getString("lastEveDay", "") ?: ""
         set(v) { sp.edit().putString("lastEveDay", v).apply() }
@@ -138,15 +117,6 @@ object Store {
         val e = focusEnd
         return if (s <= e) h in s until e else (h >= s || h < e)
     }
-
-    // ---------- open-app pause ----------
-    var openPause: Boolean
-        get() = sp.getBoolean("openPause", true)
-        set(v) { sp.edit().putBoolean("openPause", v).apply(); bump() }
-
-    var openPauseSeconds: Int
-        get() = sp.getInt("openPauseSec", 8)
-        set(v) { sp.edit().putInt("openPauseSec", v.coerceIn(3, 30)).apply(); bump() }
 
     // ---------- strict mode ----------
     private var strictRaw: Boolean
@@ -280,32 +250,6 @@ object Store {
         if (pkg in limits()) return false
         l.add(pkg)
         saveStrs("allowed", l)
-        return true
-    }
-
-    // ---------- emergency exit ----------
-    val emergencyPerDay: Int
-        get() = sp.getInt("emMax", 2)
-
-    @Synchronized
-    fun setEmergencyPerDay(n: Int): Boolean {
-        val new = n.coerceIn(0, 5)
-        if (new > emergencyPerDay && (strictActive() || Guardian.locked())) return false
-        sp.edit().putInt("emMax", new).apply()
-        bump()
-        return true
-    }
-
-    private fun emergencyUsedToday(): Int = if (sp.getString("emDay", "") == today()) sp.getInt("emN", 0) else 0
-
-    fun emergencyLeft(): Int = (emergencyPerDay - emergencyUsedToday()).coerceAtLeast(0)
-
-    /** Spends one emergency exit. Returns false if none are left today. */
-    @Synchronized
-    fun useEmergency(): Boolean {
-        if (emergencyLeft() <= 0) return false
-        sp.edit().putString("emDay", today()).putInt("emN", emergencyUsedToday() + 1).apply()
-        bump()
         return true
     }
 
@@ -540,76 +484,26 @@ object Store {
         return o.keys().asSequence().associateWith { o.getJSONObject(it).optInt("n") }
     }
 
-    // ---------- backup / restore ----------
-    fun exportAll(): String {
-        val data = JSONObject()
-        for ((k, v) in sp.all) {
-            if (k in GUARD_KEYS) continue
-            val e = JSONObject()
-            when (v) {
-                is String -> e.put("t", "s").put("v", v)
-                is Int -> e.put("t", "i").put("v", v)
-                is Long -> e.put("t", "l").put("v", v)
-                is Boolean -> e.put("t", "b").put("v", v)
-                is Float -> e.put("t", "f").put("v", v.toDouble())
-                else -> continue
-            }
-            data.put(k, e)
-        }
-        return JSONObject().put("app", "DoomGuard").put("version", 1).put("data", data).toString()
-    }
+    // ---------- update check ----------
+    var updateCheckOn: Boolean
+        get() = sp.getBoolean("updOn", true)
+        set(v) { sp.edit().putBoolean("updOn", v).apply(); bump() }
 
-    /** Replaces all stored data with the backup. Refused while strict mode is on or the guardian PIN is locked. */
-    @Synchronized
-    fun importAll(json: String): Boolean {
-        if (strictActive() || Guardian.locked()) return false
-        return try {
-            val root = JSONObject(json)
-            if (root.optString("app") != "DoomGuard") return false
-            val data = root.getJSONObject("data")
-            val keep = sp.all.filterKeys { it in KEEP_ON_IMPORT }
-            val ed = sp.edit().clear()
-            for ((k, v) in keep) {
-                when (v) {
-                    is String -> ed.putString(k, v)
-                    is Int -> ed.putInt(k, v)
-                    is Long -> ed.putLong(k, v)
-                    is Boolean -> ed.putBoolean(k, v)
-                    else -> {}
-                }
-            }
-            for (k in data.keys()) {
-                if (k in KEEP_ON_IMPORT) continue
-                val e = data.getJSONObject(k)
-                when (e.getString("t")) {
-                    "s" -> ed.putString(k, e.getString("v"))
-                    "i" -> ed.putInt(k, e.getInt("v"))
-                    "l" -> ed.putLong(k, e.getLong("v"))
-                    "b" -> ed.putBoolean(k, e.getBoolean("v"))
-                    "f" -> ed.putFloat(k, e.getDouble("v").toFloat())
-                }
-            }
-            ed.commit()
-            currentQuote = Quotes.pick(null, null)
-            bump()
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
+    var updateLast: Long
+        get() = sp.getLong("updLast", 0)
+        set(v) { sp.edit().putLong("updLast", v).apply(); bump() }
 
-    // ---------- automatic backup settings ----------
-    var autoBackupOn: Boolean
-        get() = sp.getBoolean("abOn", false)
-        set(v) { sp.edit().putBoolean("abOn", v).apply(); bump() }
+    var updateLatest: String
+        get() = sp.getString("updVer", "") ?: ""
+        set(v) { sp.edit().putString("updVer", v).apply(); bump() }
 
-    var autoBackupUri: String
-        get() = sp.getString("abUri", "") ?: ""
-        set(v) { sp.edit().putString("abUri", v).apply(); bump() }
+    var updateUrl: String
+        get() = sp.getString("updUrl", "") ?: ""
+        set(v) { sp.edit().putString("updUrl", v).apply(); bump() }
 
-    var autoBackupLast: Long
-        get() = sp.getLong("abLast", 0)
-        set(v) { sp.edit().putLong("abLast", v).apply(); bump() }
+    var updateDismissed: String
+        get() = sp.getString("updDis", "") ?: ""
+        set(v) { sp.edit().putString("updDis", v).apply(); bump() }
 
     /** Per-app foreground time recorded for one day (milliseconds). Used by the widget. */
     fun usageDay(day: String): Map<String, Long> {
@@ -774,17 +668,6 @@ object Store {
         }.sortedByDescending { it.ts }
     }
 
-    // ---------- evening reflections ----------
-    fun reflection(day: String): String = obj("reflections").optString(day, "")
-
-    @Synchronized
-    fun saveReflection(day: String, text: String) {
-        val o = obj("reflections")
-        o.put(day, text)
-        put("reflections", o)
-    }
-
-    // ---------- quotes: favourites, hidden, custom ----------
     private fun strSet(key: String): MutableList<String> {
         val a = arr(key)
         return (0 until a.length()).map { a.getString(it) }.toMutableList()
@@ -796,35 +679,25 @@ object Store {
         put(key, a)
     }
 
-    fun favorites(): List<String> = strSet("favQuotes")
-    fun hiddenQuotes(): Set<String> = strSet("hiddenQuotes").toSet()
-
+    /**
+     * Empties the guardian log, then leaves one line saying it was cleared, so clearing can't be done without a trace.
+     * Refused while the guardian PIN is set and locked (the screen asks for the PIN first, which opens the unlock window).
+     */
     @Synchronized
-    fun toggleFavorite(text: String) {
-        val l = strSet("favQuotes")
-        if (!l.remove(text)) l.add(text)
-        saveStrs("favQuotes", l)
+    fun clearEvents(): Boolean {
+        if (Guardian.locked()) return false
+        put("events", JSONArray())
+        logEvent("change", "Guardian log was cleared")
+        return true
     }
 
-    @Synchronized
-    fun hideQuote(text: String) {
-        val l = strSet("hiddenQuotes")
-        if (text !in l) l.add(text)
-        saveStrs("hiddenQuotes", l)
-    }
-
-    fun customQuotes(): List<Quote> {
-        val a = arr("customQuotes")
-        return (0 until a.length()).map {
-            val o = a.getJSONObject(it)
-            Quote(o.getString("text"), o.optString("author", "Me"), emptyList())
-        }
-    }
+    // ---------- evening reflections ----------
+    fun reflection(day: String): String = obj("reflections").optString(day, "")
 
     @Synchronized
-    fun addCustomQuote(text: String, author: String) {
-        val a = arr("customQuotes")
-        a.put(JSONObject().put("text", text).put("author", author.ifBlank { "Me" }))
-        put("customQuotes", a)
+    fun saveReflection(day: String, text: String) {
+        val o = obj("reflections")
+        o.put(day, text)
+        put("reflections", o)
     }
 }

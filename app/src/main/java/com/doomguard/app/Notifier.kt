@@ -17,7 +17,7 @@ object Notifier {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH_MON, "Monitoring", NotificationManager.IMPORTANCE_MIN))
         nm.createNotificationChannel(NotificationChannel(CH_NUDGE, "Limit warnings", NotificationManager.IMPORTANCE_HIGH))
-        nm.createNotificationChannel(NotificationChannel(CH_QUOTE, "Quotes & reminders", NotificationManager.IMPORTANCE_DEFAULT))
+        nm.createNotificationChannel(NotificationChannel(CH_QUOTE, "Reminders", NotificationManager.IMPORTANCE_DEFAULT))
     }
 
     private fun openApp(ctx: Context): PendingIntent = PendingIntent.getActivity(

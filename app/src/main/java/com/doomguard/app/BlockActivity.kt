@@ -60,15 +60,7 @@ private val EXT_MINUTES = listOf(5, 5, 3)
 private val EXT_WAIT_SECONDS = listOf(15, 30, 60)
 private const val LOCK_MINUTES = 30L
 
-/** After you answer the open-app pause, the app stays open this long before asking again. */
-private const val OPEN_OK_MINUTES = 10L
-
-private const val EMERGENCY_MINUTES = 10L
-private val EMERGENCY_REASONS = listOf("Family or health", "Work", "Money or banking", "Directions", "Other")
-
 private val MOODS = listOf("Bored", "Stressed", "Procrastinating", "Lonely", "Tired", "Just habit")
-private val INTENTS = listOf("Check messages", "Look something up", "Post or reply", "Quick break", "Bored", "No particular reason")
-private val INTENTS_WITH_SUGGESTION = setOf("Bored", "No particular reason")
 
 class BlockActivity : ComponentActivity() {
     companion object {
@@ -103,7 +95,7 @@ class BlockActivity : ComponentActivity() {
             }
         }
         val lockedUntil = state.lockUntil
-        val waitSeconds = if (mode == "INTENT") Store.openPauseSeconds else EXT_WAIT_SECONDS.getOrElse(state.ext) { 60 }
+        val waitSeconds = EXT_WAIT_SECONDS.getOrElse(state.ext) { 60 }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = leave()
@@ -124,13 +116,10 @@ class BlockActivity : ComponentActivity() {
                     onMood = { mood = it },
                     onReason = { reason = it },
                     total = total,
-                    emergencyLeft = Store.emergencyLeft(),
-                    onEmergency = { reason -> emergency(reason) },
                     guardian = Guardian.isSet(),
                     guardianOnly = guardianOnly,
                     onHome = { leave() },
                     onContinue = { continueUsing() },
-                    onOpen = { openApp() },
                     onGuardian = { pin, minutes, note -> guardianOverride(pin, minutes, note) }
                 )
             }
@@ -161,30 +150,6 @@ class BlockActivity : ComponentActivity() {
         saveTrigger()
         goHome(this)
         finish()
-    }
-
-    /** Open-app pause answered: let the app open and don't ask again for a while. */
-    private fun openApp() {
-        val s = Store.pkgState(pkg)
-        s.okUntil = System.currentTimeMillis() + OPEN_OK_MINUTES * 60_000L
-        Store.savePkgState(pkg, s)
-        saveTrigger()
-        finish() // reveals the app underneath
-    }
-
-    /** A limited number of daily emergency exits: 10 minutes, any reason from the list, always logged. Works in strict mode too. */
-    private fun emergency(reason: String) {
-        if (!Store.useEmergency()) return
-        val s = Store.pkgState(pkg)
-        val until = System.currentTimeMillis() + EMERGENCY_MINUTES * 60_000L
-        s.guardianUntil = until // the same "time granted" slot the guardian override uses
-        s.lockUntil = 0
-        s.okUntil = until
-        s.warned = true
-        Store.savePkgState(pkg, s)
-        Store.logEvent("emergency", "Emergency access to ${appLabel(this, pkg)} for $EMERGENCY_MINUTES minutes ($reason)")
-        saveTrigger()
-        finish() // reveals the app underneath
     }
 
     /** The guardian types the PIN on this screen to grant more time. Does not open the settings unlock window. */
@@ -234,38 +199,32 @@ private fun BlockScreen(
     extraMinutes: Int,
     lockedUntil: Long,
     total: Boolean,
-    emergencyLeft: Int,
-    onEmergency: (String) -> Unit,
     guardian: Boolean,
     guardianOnly: Boolean,
     onMood: (String?) -> Unit,
     onReason: (String) -> Unit,
     onHome: () -> Unit,
     onContinue: () -> Unit,
-    onOpen: () -> Unit,
     onGuardian: (String, Int, String) -> PinResult
 ) {
-    val quote = remember {
-        // The pause screen only draws from quotes that make you reflect on the choice you are about to make.
-        Quotes.pick("reflection", null)
-    }
-    val alternative = remember {
-        val pending = Store.tasksToday().firstOrNull { !it.done }
-        val options = mutableListOf(
-            "Take a 5-minute walk",
-            "Drink a glass of water",
-            "Stretch for two minutes",
-            "Message someone you care about",
-            "Read two pages of a book",
-            "Step outside and look at the sky",
-            "Write down what you're avoiding"
+    // Up to three ideas: your own intentions for today first, then small things that fit the time of day.
+    val alternatives = remember {
+        val mine = Store.tasksToday().filter { !it.done }.take(2).map { it.text }
+        val hour = java.time.LocalTime.now().hour
+        val byTime = when (hour) {
+            in 5..10 -> listOf("Make breakfast or a hot drink", "Open a window and get some daylight", "Plan your first task for the morning")
+            in 11..16 -> listOf("Eat something proper", "Walk around the block", "Clear one small job from your list")
+            in 17..21 -> listOf("Start cooking or tidy up for ten minutes", "Call or message someone you care about", "Prepare what you need for tomorrow")
+            else -> listOf("Put the phone on charge across the room", "Drink some water and get ready for bed", "Write tomorrow's top task on paper")
+        }
+        val general = listOf(
+            "Drink a glass of water", "Stretch for two minutes", "Read two pages of a book",
+            "Step outside for five minutes", "Tidy your desk or bed", "Write down what you're avoiding"
         )
-        if (pending != null) { options.add("Start: ${pending.text}"); options.add("Start: ${pending.text}") }
-        options.random()
+        (mine + (byTime + general).shuffled()).take(3)
     }
 
     var selectedMood by remember { mutableStateOf<String?>(null) }
-    var selectedIntent by remember { mutableStateOf<String?>(null) }
     var reason by remember { mutableStateOf("") }
     var left by remember { mutableIntStateOf(waitSeconds) }
     LaunchedEffect(Unit) {
@@ -283,14 +242,12 @@ private fun BlockScreen(
     )
 
     val title = when (mode) {
-        "INTENT" -> "Before you open $label"
         "SESSION" -> "Focus session in progress"
         "FOCUS" -> "Focus hours"
         "LOCKED" -> "$label is locked"
         else -> if (total) "Daily total reached" else "Time's up on $label"
     }
     val subtitle = when (mode) {
-        "INTENT" -> "What are you here for? Pick one and take a breath."
         "SESSION" -> {
             val mins = ((Store.focusSessionEnd - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0)
             val what = Store.focusSessionLabel
@@ -303,9 +260,8 @@ private fun BlockScreen(
         }
         else -> (if (total) "You've used ${fmtDuration(usedMs)} across your limited apps today. Your total cap is ${fmtMinutes(limitMin)}."
         else "You've used ${fmtDuration(usedMs)} today. Your limit is ${fmtMinutes(limitMin)}.") +
-            if (!canContinue) (if (guardianOnly) " Extra time needs your guardian." else " No more extensions available.") else ""
+                if (!canContinue) (if (guardianOnly) " Extra time needs your guardian." else " No more extensions available.") else ""
     }
-    val showSuggestion = mode != "INTENT" || selectedIntent in INTENTS_WITH_SUGGESTION
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
         Column(
@@ -324,33 +280,10 @@ private fun BlockScreen(
                 Text(if (inhale) "Breathe in" else "Breathe out", color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp)
             }
 
-            Text("“${quote.text}”", style = MaterialTheme.typography.titleMedium, fontFamily = QuoteFont, color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center)
-            Text("— ${quote.author}", color = MaterialTheme.colorScheme.primary)
-
-            if (mode == "INTENT") {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("I'm here to…", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        INTENTS.forEach { i ->
-                            FilterChip(
-                                selected = selectedIntent == i,
-                                onClick = {
-                                    selectedIntent = if (selectedIntent == i) null else i
-                                    onMood(selectedIntent?.let { "Opened to: $it" })
-                                },
-                                label = { Text(i) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (showSuggestion) {
-                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Instead, try", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-                        Text(alternative, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
-                    }
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Instead, try", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                    alternatives.forEach { Text("• $it", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyLarge) }
                 }
             }
 
@@ -373,20 +306,7 @@ private fun BlockScreen(
             }
 
             Button(onClick = onHome, modifier = Modifier.fillMaxWidth()) {
-                Text(if (mode == "INTENT") "Never mind, go home" else "Close it and go home")
-            }
-
-            if (mode == "INTENT") {
-                val ready = left == 0 && selectedIntent != null
-                OutlinedButton(onClick = onOpen, enabled = ready, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        when {
-                            left > 0 -> "Wait ${left}s…"
-                            selectedIntent == null -> "Pick a reason first"
-                            else -> "Open $label"
-                        }
-                    )
-                }
+                Text("Close it and go home")
             }
 
             if (canContinue) {
@@ -411,46 +331,8 @@ private fun BlockScreen(
                     }
                 }
             }
-            if (emergencyLeft > 0 && mode != "INTENT") {
-                var eOpen by remember { mutableStateOf(false) }
-                var eReason by remember { mutableStateOf<String?>(null) }
-                var eLeft by remember { mutableIntStateOf(10) }
-                LaunchedEffect(eOpen) {
-                    if (eOpen) {
-                        eLeft = 10
-                        while (eLeft > 0) { delay(1000); eLeft-- }
-                    }
-                }
-                if (!eOpen) {
-                    TextButton(onClick = { eOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Emergency access ($emergencyLeft left today)")
-                    }
-                } else {
-                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "For something that truly can't wait. You get $EMERGENCY_MINUTES minutes, and it is written to the guardian log.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            EMERGENCY_REASONS.forEach { r ->
-                                FilterChip(selected = eReason == r, onClick = { eReason = r }, label = { Text(r) })
-                            }
-                        }
-                        val ready = eLeft == 0 && eReason != null
-                        OutlinedButton(onClick = { eReason?.let(onEmergency) }, enabled = ready, modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                when {
-                                    eLeft > 0 -> "Wait ${eLeft}s…"
-                                    eReason == null -> "Pick a reason first"
-                                    else -> "Open for $EMERGENCY_MINUTES minutes"
-                                }
-                            )
-                        }
-                    }
-                }
-            }
 
-            if (guardian && mode != "INTENT") {
+            if (guardian) {
                 var open by remember { mutableStateOf(false) }
                 var pin by remember { mutableStateOf("") }
                 var gMins by remember { mutableIntStateOf(15) }

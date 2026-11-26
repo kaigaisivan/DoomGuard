@@ -163,6 +163,7 @@ fun AccountabilitySection(gate: GuardianGate) {
     val events = remember(v) { Store.events().take(15) }
     var showSet by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
+    var confirmClear by remember { mutableStateOf(false) }
 
     val ctx = LocalContext.current
     var adminTick by remember { mutableIntStateOf(0) }
@@ -175,7 +176,7 @@ fun AccountabilitySection(gate: GuardianGate) {
         if (!isSet) {
             Text(
                 "A guardian PIN locks every change that would loosen your limits: raising or removing a limit, " +
-                    "pausing enforcement, ending a focus session, restoring a backup. Ask someone you trust to choose the PIN.",
+                    "pausing enforcement, ending a focus session, clearing the guardian log. Ask someone you trust to choose the PIN.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Button(onClick = { showSet = true }, modifier = Modifier.fillMaxWidth()) { Text("Set a guardian PIN") }
@@ -236,7 +237,10 @@ fun AccountabilitySection(gate: GuardianGate) {
             ) { Text("Turn off uninstall protection") }
         }
 
-        Text("Guardian log", style = MaterialTheme.typography.labelLarge)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Guardian log", style = MaterialTheme.typography.labelLarge)
+            if (events.isNotEmpty()) TextButton(onClick = { confirmClear = true }) { Text("Clear") }
+        }
         if (events.isEmpty()) {
             Text(
                 "Overrides, PIN changes, permission changes and monitoring gaps will be listed here.",
@@ -259,6 +263,21 @@ fun AccountabilitySection(gate: GuardianGate) {
             title = if (isSet) "Change guardian PIN" else "Set guardian PIN",
             onDismiss = { showSet = false },
             onDone = { showSet = false }
+        )
+    }
+    if (confirmClear) {
+        AlertDialog(
+            onDismissRequest = { confirmClear = false },
+            title = { Text("Clear the guardian log?") },
+            text = { Text("This deletes every entry. DoomGuard keeps one line saying the log was cleared.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmClear = false
+                    // With a PIN set, this asks for it first. Without one it clears straight away.
+                    gate.run("Clear the guardian log") { Store.clearEvents() }
+                }) { Text("Clear") }
+            },
+            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } }
         )
     }
     if (confirmRemove) {

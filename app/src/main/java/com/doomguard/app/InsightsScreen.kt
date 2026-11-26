@@ -3,6 +3,7 @@
 package com.doomguard.app
 
 import android.content.Intent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,10 +14,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -28,6 +30,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -75,20 +81,22 @@ fun InsightsScreen(pad: PaddingValues) {
     val weekMin = perDay.sumOf { it.second } / 60_000L
     val maxMs = (perDay.maxOfOrNull { it.second } ?: 0L).coerceAtLeast(60_000L)
 
-    // Time per app over the last 7 days, limited or not (days before this update only have limited apps).
+    // Time per app over the last 7 days, limited or not.
     val weekTotals = HashMap<String, Long>()
     days.forEach { d ->
         val perApp = if (d == LocalDate.now()) todayUsage else history[d.toString()] ?: emptyMap()
         perApp.forEach { (p, ms) -> weekTotals[p] = (weekTotals[p] ?: 0L) + ms }
     }
-    val topApps = weekTotals.filter { (p, ms) -> p in launcherSet && ms >= 60_000L }
-        .entries.sortedByDescending { it.value }.take(10)
+    val appSlices = weekTotals.filter { (p, ms) -> p in launcherSet && ms >= 60_000L }
+        .entries.sortedByDescending { it.value }
+        .let { all ->
+            val top = all.take(5).map { appLabel(ctx, it.key) to it.value }
+            val rest = all.drop(5).sumOf { it.value }
+            if (rest > 0) top + ("Other" to rest) else top
+        }
 
     val monthAgo = System.currentTimeMillis() - 30 * DAY_MS
-    val openedTo = "Opened to: "
-    val recentTriggers = triggers.filter { it.ts >= monthAgo && it.mood != "unspecified" && !it.mood.startsWith(openedTo) }
-    val intentCounts = triggers.filter { it.ts >= monthAgo && it.mood.startsWith(openedTo) }
-        .groupingBy { it.mood.removePrefix(openedTo) }.eachCount().entries.sortedByDescending { it.value }
+    val recentTriggers = triggers.filter { it.ts >= monthAgo && it.mood != "unspecified" }
     val moodCounts = recentTriggers.groupingBy { it.mood }.eachCount().entries.sortedByDescending { it.value }
     val bucketCounts = triggers.filter { it.ts >= monthAgo }.groupingBy {
         bucket(Instant.ofEpochMilli(it.ts).atZone(ZoneId.systemDefault()).hour)
@@ -98,6 +106,10 @@ fun InsightsScreen(pad: PaddingValues) {
     val catTotals = acts.filter { it.ts >= weekAgo && it.minutes > 0 }
         .groupBy { it.cat }.mapValues { e -> e.value.sumOf { it.minutes } }
         .entries.sortedByDescending { it.value }
+
+    val pickupsToday = unlocks[LocalDate.now().toString()] ?: 0
+    val pickupDays = days.map { unlocks[it.toString()] ?: 0 }.filter { it > 0 }
+    val pickupAvg = if (pickupDays.isEmpty()) 0 else pickupDays.sum() / pickupDays.size
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(pad),
@@ -109,6 +121,7 @@ fun InsightsScreen(pad: PaddingValues) {
                 if (limits.isEmpty()) {
                     Text("Pick apps in the Apps tab and this chart fills in as you go.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
+                    Text("${fmtMinutes(weekMin.toInt())} this week", style = MaterialTheme.typography.titleMedium)
                     Row(Modifier.fillMaxWidth().height(160.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
                         perDay.forEach { (d, ms) ->
                             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
@@ -126,127 +139,116 @@ fun InsightsScreen(pad: PaddingValues) {
                             }
                         }
                     }
-                    Text("History builds from the day you installed the app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-        }
-
-        if (limits.isNotEmpty() && weekMin > 0) {
-            item {
-                Section("Reality check") {
-                    Text("${fmtMinutes(weekMin.toInt())} in these apps this week.", style = MaterialTheme.typography.titleMedium)
+                if (pickupsToday > 0 || pickupAvg > 0) {
                     Text(
-                        "That's roughly ${weekMin} pages of a book at a page a minute, " +
-                            "or ${weekMin / 30} thirty-minute walks.",
+                        "Phone pickups: $pickupsToday today, $pickupAvg a day on average.",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
 
-        if (topApps.isNotEmpty()) {
+        if (appSlices.isNotEmpty()) {
             item {
-                Section("Top apps (7 days)") {
-                    BarList(null, topApps.map { appLabel(ctx, it.key) to (it.value / 60_000L).toInt() }, suffix = " min")
-                    Text(
-                        "Apps you haven't limited are recorded from the day you installed this update.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Section("Where the time went (7 days)") {
+                    PieChart(appSlices) { fmtDuration(it) }
                 }
             }
         }
 
-        if (unlocks.values.any { it > 0 }) {
+        if (moodCounts.isNotEmpty() || bucketCounts.isNotEmpty()) {
             item {
-                Section("Phone pickups (7 days)") {
-                    BarList(
-                        null,
-                        days.map { d ->
-                            d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()) to (unlocks[d.toString()] ?: 0)
-                        }
-                    )
-                }
-            }
-        }
-
-        item {
-            Section("What triggers the urge") {
-                if (triggers.isEmpty()) {
-                    Text(
-                        "When the pause screen appears, tap how you were feeling. After a few weeks, patterns show up here.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    if (moodCounts.size >= 1 && recentTriggers.size >= 3) {
+                Section("What triggers the urge") {
+                    if (recentTriggers.size >= 3 && moodCounts.isNotEmpty()) {
                         val topBucket = bucketCounts.firstOrNull()?.key
                         Text(
                             "Most urges come when you feel ${moodCounts.first().key.lowercase()}" +
-                                (if (topBucket != null) ", usually in the ${topBucket.lowercase()}." else "."),
-                            style = MaterialTheme.typography.titleSmall
+                                    (if (topBucket != null) ", usually in the ${topBucket.lowercase()}." else "."),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    if (moodCounts.isNotEmpty()) BarList("Feeling", moodCounts.map { it.key to it.value })
-                    if (intentCounts.isNotEmpty()) BarList("Why you opened apps", intentCounts.map { it.key to it.value })
-                    BarList("Time of day", bucketCounts.map { it.key to it.value })
+                    if (moodCounts.isNotEmpty()) PieChart(moodCounts.map { it.key to it.value.toLong() }) { "$it" }
+                }
+            }
+        }
+
+        if (catTotals.isNotEmpty()) {
+            item {
+                Section("Your logged time (7 days)") {
+                    PieChart(catTotals.map { it.key.label to it.value.toLong() }) { "$it min" }
                 }
             }
         }
 
         item {
-            Section("Where your logged time went (7 days)") {
-                if (catTotals.isEmpty()) {
-                    Text("Log activities with minutes to see this.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    BarList(null, catTotals.map { it.key.label to it.value }, suffix = " min")
-                }
-            }
-        }
-
-        item {
-            Section("Accountability") {
-                Text("Share a plain-text weekly summary with a friend.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedButton(onClick = {
-                    val body = buildString {
-                        appendLine("My DoomGuard week")
-                        appendLine("Time in limited apps: ${fmtMinutes(weekMin.toInt())}")
-                        perDay.forEach { (d, ms) ->
-                            appendLine("  ${d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())}: ${fmtDuration(ms)}")
-                        }
-                        val s = Store.streak()
-                        appendLine("Streak: ${s.first} days (best ${s.second})")
-                        catTotals.forEach { appendLine("${it.key.label}: ${it.value} min logged") }
-                        if (Store.webFilterActive()) {
-                            val blockedHistory = Store.blockedHistory()
-                            val blockedWeek = (0..6).sumOf { blockedHistory[LocalDate.now().minusDays(it.toLong()).toString()] ?: 0 }
-                            appendLine("Blocked site attempts: $blockedWeek")
-                        }
-                        val ev = Store.events().filter { it.ts >= weekAgo }
-                        if (Guardian.isSet() || ev.isNotEmpty() || Store.emergencyPerDay > 0) {
-                            appendLine("Guardian overrides: ${ev.count { it.kind == "override" }}")
-                            appendLine("Tamper alerts: ${ev.count { it.kind == "tamper" }}")
-                            appendLine("Emergency exits: ${ev.count { it.kind == "emergency" }}")
-                        }
+            OutlinedButton(onClick = {
+                val body = buildString {
+                    appendLine("My DoomGuard week")
+                    appendLine("Time in limited apps: ${fmtMinutes(weekMin.toInt())}")
+                    perDay.forEach { (d, ms) ->
+                        appendLine("  ${d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())}: ${fmtDuration(ms)}")
                     }
-                    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, body)
-                    ctx.startActivity(Intent.createChooser(send, "Share weekly summary").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                }) { Text("Share weekly summary") }
-            }
+                    val s = Store.streak()
+                    appendLine("Streak: ${s.first} days (best ${s.second})")
+                    catTotals.forEach { appendLine("${it.key.label}: ${it.value} min logged") }
+                    if (Store.webFilterActive()) {
+                        val blockedHistory = Store.blockedHistory()
+                        val blockedWeek = (0..6).sumOf { blockedHistory[LocalDate.now().minusDays(it.toLong()).toString()] ?: 0 }
+                        appendLine("Blocked site attempts: $blockedWeek")
+                    }
+                    val ev = Store.events().filter { it.ts >= weekAgo }
+                    if (Guardian.isSet() || ev.isNotEmpty()) {
+                        appendLine("Guardian overrides: ${ev.count { it.kind == "override" }}")
+                        appendLine("Tamper alerts: ${ev.count { it.kind == "tamper" }}")
+                    }
+                }
+                val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, body)
+                ctx.startActivity(Intent.createChooser(send, "Share weekly summary").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }, modifier = Modifier.fillMaxWidth()) { Text("Share weekly summary") }
         }
     }
 }
 
+/** A donut chart with a plain legend beside it. Slice values are summed, so pass raw amounts. */
 @Composable
-private fun BarList(title: String?, rows: List<Pair<String, Int>>, suffix: String = "") {
-    val max = (rows.maxOfOrNull { it.second } ?: 1).coerceAtLeast(1)
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (title != null) Text(title, style = MaterialTheme.typography.labelLarge)
-        rows.forEach { (label, n) ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(label)
-                Text("$n$suffix", color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun PieChart(slices: List<Pair<String, Long>>, format: (Long) -> String) {
+    val total = slices.sumOf { it.second }.coerceAtLeast(1L)
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+    val other = MaterialTheme.colorScheme.outline
+    val palette = listOf(primary, secondary, Color(0xFFD98C7A), Color(0xFF7A9CC6), Color(0xFFB59BC9), Color(0xFFC9B458))
+    fun colorAt(i: Int, label: String): Color = if (label == "Other") other else palette[i % palette.size]
+
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Canvas(Modifier.size(120.dp)) {
+            val stroke = 22.dp.toPx()
+            val d = size.minDimension - stroke
+            var start = -90f
+            slices.forEachIndexed { i, (label, v) ->
+                val sweep = 360f * v / total
+                drawArc(
+                    color = colorAt(i, label),
+                    startAngle = start,
+                    sweepAngle = (sweep - 2f).coerceAtLeast(1f),
+                    useCenter = false,
+                    topLeft = Offset(stroke / 2, stroke / 2),
+                    size = Size(d, d),
+                    style = Stroke(stroke)
+                )
+                start += sweep
             }
-            LinearProgressIndicator(progress = { n.toFloat() / max }, modifier = Modifier.fillMaxWidth())
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            slices.forEachIndexed { i, (label, v) ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.size(10.dp).background(colorAt(i, label), CircleShape))
+                    Text(label, modifier = Modifier.weight(1f), maxLines = 1, style = MaterialTheme.typography.bodyMedium)
+                    Text(format(v), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
         }
     }
 }

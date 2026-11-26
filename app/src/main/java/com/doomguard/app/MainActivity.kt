@@ -15,39 +15,28 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val notifPermission =
@@ -90,69 +79,50 @@ class MainActivity : ComponentActivity() {
 
 private data class Tab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
+/** Tab positions, so screens can send you to another one. */
+const val TAB_TODAY = 0
+const val TAB_APPS = 1
+const val TAB_INSIGHTS = 2
+const val TAB_SETTINGS = 3
+
 @Composable
 fun App() {
-    val drawer = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var tab by rememberSaveable { mutableIntStateOf(TAB_TODAY) }
     val tabs = remember {
         listOf(
             Tab("Today", Icons.Default.Home),
-            Tab("Log", Icons.Default.Edit),
-            Tab("Insights", Icons.Default.Info),
             Tab("Apps", Icons.Default.Lock),
+            Tab("Insights", Icons.Default.Info),
             Tab("Settings", Icons.Default.Settings)
         )
     }
 
-    // The side panel's quote rotates at the interval chosen in Settings while the app is open.
-    val interval = rememberStore { Store.quoteIntervalMin }
-    LaunchedEffect(interval) {
-        if (interval > 0) {
-            while (true) {
-                delay(interval * 60_000L)
-                Store.currentQuote = Quotes.pick(null, Store.currentQuote?.text)
-            }
-        }
-    }
-
-    ModalNavigationDrawer(
-        drawerState = drawer,
-        drawerContent = { ModalDrawerSheet { QuotePanel() } }
-    ) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                TopAppBar(
-                    title = { Text(tabs[tab].label) },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawer.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Open quotes panel")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-                )
-            },
-            bottomBar = {
-                NavigationBar {
-                    tabs.forEachIndexed { i, t ->
-                        NavigationBarItem(
-                            selected = tab == i,
-                            onClick = { tab = i },
-                            icon = { Icon(t.icon, contentDescription = t.label) },
-                            label = { Text(t.label) }
-                        )
-                    }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = { Text(tabs[tab].label) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                tabs.forEachIndexed { i, t ->
+                    NavigationBarItem(
+                        selected = tab == i,
+                        onClick = { tab = i },
+                        icon = { Icon(t.icon, contentDescription = t.label) },
+                        label = { Text(t.label) }
+                    )
                 }
             }
-        ) { pad ->
-            when (tab) {
-                0 -> TodayScreen(pad, goTo = { tab = it })
-                1 -> LogScreen(pad)
-                2 -> InsightsScreen(pad)
-                3 -> AppsScreen(pad)
-                else -> SettingsScreen(pad)
-            }
+        }
+    ) { pad ->
+        when (tab) {
+            TAB_TODAY -> TodayScreen(pad, goTo = { tab = it })
+            TAB_APPS -> AppsScreen(pad)
+            TAB_INSIGHTS -> InsightsScreen(pad)
+            else -> SettingsScreen(pad)
         }
     }
 }

@@ -6,7 +6,7 @@
 ![UI](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4)
 
 An Android app that stops doom scrolling. You pick the apps that drain you and set a daily time for each.
-When time is up, DoomGuard covers the app with a pause screen (breathing circle, a quote, a better idea) and makes
+When time is up, DoomGuard covers the app with a pause screen (breathing circle, a reflective quote, a better idea) and makes
 carrying on deliberately hard. It also tracks where your time goes, blocks adult sites system-wide,
 and adds accountability so the rules can't be quietly loosened in a weak moment.
 
@@ -29,7 +29,7 @@ Built as a personal project: Kotlin and Jetpack Compose (Material 3), no servers
 - **System-wide website filter**: a local DNS-only VPN with ~83,000 bundled domains, no remote server
 - **Accountability that holds**: salted-hash guardian PIN, 24-hour cool-downs, tamper log, uninstall protection
 - **Built to survive Android**: watchdog alarm, boot and update handling, and notes on OEM battery killers
-- **Everyday touches**: Quick Settings tile, home-screen widget, weekly auto-backup, 99 quotes
+- **Everyday touches**: Quick Settings tile, home-screen widget, optional update check, reflective quotes on the pause screen
 
 ## Tech notes
 
@@ -53,7 +53,7 @@ The app can't work without these. The Today tab shows a "Finish setup" card unti
 |---|---|
 | Usage access | Lets DoomGuard see which app is open and for how long |
 | Display over other apps | Lets the pause screen appear on top of the app you're scrolling |
-| Notifications | Quote reminders, limit warnings, evening review |
+| Notifications | Limit warnings, focus-session and evening-review reminders |
 | Battery: unrestricted | Stops the phone killing the background monitor |
 
 Tecno, Infinix, Xiaomi, Oppo, Vivo and Samsung phones are aggressive about killing background apps.
@@ -62,23 +62,20 @@ App info > Battery, and lock it in the recent-apps list.
 
 ## What's inside
 
-- **Today**: quote, focus-session timer, streak, time used vs limit per app, **all apps used today with time spent (limited or not, with a one-tap Limit button)**, phone pickups (unlocks and time of first unlock), today's intentions (to-do), evening review
-- **Log**: log activities (text, category, minutes), search, grouped by day, CSV export
-- **Insights**: 7-day usage chart, top apps over 7 days, "reality check" conversion, 7-day phone pickups, trigger patterns (feeling, why you opened an app, time of day), logged time by category, shareable weekly summary
+- **Today**: streak first, then **all apps used today with time spent** (tap the card to open the Apps tab; limited apps show an Unlimit button, others a one-tap Limit button), focus-session timer, website-filter status, phone pickups, today's intentions (to-do), daily review
 - **Apps**: choose which apps to limit and set limits in 5-minute steps
-- **Settings**: permissions, light/dark/match-phone appearance, open-app pause, strict mode, quote interval, focus hours, evening reminder, **accountability (guardian PIN and log)**, backup and restore, CSV export
-- **Quotes side panel** (swipe from the left edge or tap the menu icon): current quote, themes, favourites, hide, add your own. Rotates on your chosen interval and also arrives as a notification.
+- **Insights**: 7-day usage chart, top apps over 7 days, "reality check" conversion, 7-day phone pickups, trigger patterns, logged time by category, shareable weekly summary
+- **Settings**: permissions and the pause-screen test, **Updates** (check for updates, automatic daily check), appearance, strict mode, daily cap, emergency exit, focus hours, evening reminder, website filter, **accountability (guardian PIN and a log you can clear with the PIN)**
 
 ## How blocking works
 
-0. **Open-app pause**: opening a limited app first shows "What are you here for?" with a short wait (8 seconds by default). Answer, then the app opens and isn't questioned again for 10 minutes. The answers feed the Insights tab. Turn it off in Settings.
 1. At 80% of the limit: a notification with the time left.
 2. At 100%: full-screen pause screen. Close the app, or wait 15 seconds and write a reason (8+ characters) to get 5 more minutes.
 3. Second continue: 30 second wait, 5 minutes. Third: 60 second wait, 3 minutes.
 4. After that the app is locked for 30 minutes.
 5. **Focus hours**: limited apps are blocked outright in the window you choose (default 22:00 to 06:00).
-5b. **Focus sessions**: start a 25 to 90 minute session from the Today tab. All limited apps are blocked until it ends, and the session is added to your activity log automatically (or partially, if you end it early).
-6. **Strict mode**: no continue button at all, limits can't be raised, apps can't be removed, monitoring can't be paused, focus sessions can't be ended early and backups can't be restored. Switching it off takes 24 hours.
+6. **Focus sessions**: start a 25 to 90 minute session from the Today tab. All limited apps are blocked until it ends, and the time counts as productive in your daily review (or partially, if you end it early).
+7. **Strict mode**: no continue button at all, limits can't be raised, apps can't be removed, monitoring can't be paused, focus sessions can't be ended early. Switching it off takes 24 hours.
 
 ## Accountability (guardian PIN)
 
@@ -86,14 +83,14 @@ Set a PIN in Settings > Accountability, ideally one chosen by someone else (a pa
 With a PIN set:
 
 - Anything that loosens the rules asks for it: raising or removing a limit, pausing enforcement, turning off
-  the open-app pause or focus hours, ending a focus session early, requesting strict-mode switch-off, restoring a backup.
+  focus hours, ending a focus session early, requesting strict-mode switch-off, clearing the guardian log.
 - The pause screen swaps the write-a-reason button for a **Guardian override**: the guardian types the PIN and picks
   10 to 60 minutes. (Switch this off in Settings if you still want self-service extensions.)
 - Entering the PIN in the app unlocks settings for 5 minutes, and leaving the app locks them again.
 - 5 wrong tries lock PIN entry for 15 minutes.
 - The **guardian log** records overrides, PIN changes, loosening changes, permissions switched off, and gaps when
   monitoring was not running. Permission loss also posts a notification.
-- The PIN is stored only as a salted PBKDF2 hash, and it is never written into backup files.
+- The PIN is stored only as a salted PBKDF2 hash, and it never leaves the phone.
 
 This is on-device only: whoever holds the phone sees the log and the alerts, and there is no remote parent app.
 
@@ -123,15 +120,12 @@ This is on-device only: whoever holds the phone sees the log and the alerts, and
 - **Dual apps / second space**: apps cloned by the phone maker (Xiaomi "Dual apps", Samsung "Dual Messenger", Second space) run as a separate user, and
   Android doesn't let one user's app see another's usage, so those clones can't be limited by DoomGuard.
 
-## Quick access and backups
+## Quick access
 
 - **Quick Settings tile**: swipe down, edit the tiles, drag in "Start focus". One tap starts a 25-minute focus session and the tile shows the time left.
   Tapping a running session tries to end it early; strict mode or a locked guardian PIN refuse and open the app instead.
 - **Home-screen widget**: long-press the home screen, Widgets, DoomGuard. Shows focus time left, or the limited app closest to its limit
-  (and the total cap if you set one). The monitor refreshes it every minute.
-- **Automatic backup** (Settings): pick a folder once. Every 7 days a backup file is written there and the last 4 are kept.
-  Choose a synced folder (for example in Google Drive, if it shows in the picker) so a lost phone doesn't lose your data.
-  The guardian PIN is never written to backups, and restoring one can't change the website filter or the backup folder.
+  (and the total cap if you set one). Shows today's total screen time, your top apps with bars against their limits, and a status line. The monitor refreshes it every minute.
 
 ## Website filter (adult sites)
 
@@ -142,7 +136,7 @@ so speed and battery are barely affected, and there is no remote server.
 - Built-in lists: about 77,000 adult domains (from the open-source StevenBlack/hosts project, MIT licence).
   Matching includes subdomains. They can't be removed from inside the app.
 - Your own list: add any site. Removing one needs a 24-hour wait, plus the guardian PIN if one is set.
-- Switching the filter off needs a request, the guardian PIN if one is set, and a 24-hour wait (like strict mode). Restoring a backup can't change it.
+- Switching the filter off needs a request, the guardian PIN if one is set, and a 24-hour wait (like strict mode).
 - Bypass handling: well-known DNS-over-HTTPS providers are blocked so browsers fall back to normal lookups, and Firefox's DoH canary domain is blocked
   so it turns DoH off. If Android's Private DNS is set to a specific server the app warns you, logs it and posts a notification.
 - Tamper handling: if the VPN is switched off in system settings or replaced by another VPN, the app logs it, notifies you, and the watchdog tries to restart it.
@@ -156,26 +150,26 @@ so speed and battery are barely affected, and there is no remote server.
 
 | File | Role |
 |---|---|
-| `MonitorService.kt` | Foreground service, polls every 3s, decides when to block, sends quote/evening notifications; also `BootReceiver` |
+| `MonitorService.kt` | Foreground service, polls every 3s, decides when to block, sends warning and evening notifications; also `BootReceiver` |
 | `UsageTracker.kt` | Converts Android usage events into per-app foreground time |
 | `BlockActivity.kt` | The pause screen |
-| `Store.kt` | JSON-in-SharedPreferences storage (activities, limits, triggers, tasks, quotes, history, focus sessions, backup and restore) |
+| `Store.kt` | JSON-in-SharedPreferences storage (activities, limits, triggers, tasks, history, focus sessions, the guardian log) |
 | `Guardian.kt`, `GuardianUi.kt` | PIN hashing, lockout and unlock window; PIN dialogs, gate and the Accountability section |
 | `WebFilterService.kt`, `WebFilterUi.kt` | Website filter: DNS-capturing VPN service, domain matching, Settings section |
 | `FocusTileService.kt`, `StatusWidget.kt` | Quick Settings tile and home-screen widget |
-| `AutoBackup.kt` | Weekly backup to a chosen folder, plus its Settings section |
+| `UpdateChecker.kt` | Optional daily check of GitHub for a newer release, with the Settings section and the Today banner |
 | `Watchdog.kt` | Alarm-based restart of the monitor service |
 | `Essentials.kt` | Apps that can never be limited (dialer, messages, maps, your allow-list) |
 | `FocusCard.kt` | Start, watch and end a focus session |
 | `Quotes.kt` | 99 built-in quotes (Dostoevsky, the Stoics, Thoreau, Emerson, Tolstoy, Swahili proverbs and more), tagged by theme; the pause screen draws only from the reflection set |
-| `MainActivity.kt`, `*Screen.kt`, `QuotePanel.kt`, `Theme.kt` | UI |
+| `MainActivity.kt`, `*Screen.kt`, `Theme.kt` | UI (tabs: Today, Apps, Insights, Settings) |
 
 ## Known limitations
 
-- Quotes are offline only. Adding more means editing `Quotes.kt` or using **+ Add my own quote** in the side panel.
+- Quotes are built in and only appear on the pause screen and in limit warnings. Adding more means editing `Quotes.kt`.
 - Usage history in Insights builds from install day (the service records it each minute).
 - Phone unlocks come from Android's keyguard events. Phones with no lock screen may show 0.
-- A determined person can still uninstall the app or revoke permissions. Strict mode and the guardian PIN raise the bar, but Android doesn't allow an app to protect itself from that. Clearing the app's data removes the PIN, though it also wipes limits and the log.
+- A determined person can still uninstall the app or revoke permissions. Strict mode and the guardian PIN raise the bar, but Android doesn't allow an app to protect itself from that. Clearing the app's data removes the PIN, though it also wipes limits and history.
 - Built-in quotes were chosen for confident attribution and mostly come from public-domain translations, but I could not check sources from the build environment. Spot-check any you plan to share publicly.
 
 ## Credits

@@ -1,0 +1,24 @@
+:root{--mist:#eaf2f4;--white:#fff;--ink:#0e2a33;--ink2:#425c66;--teal:#14505b;--sun:#f5b83d;--sun-deep:#d99a1a;
+--display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;--body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--mist);color:var(--ink);font:400 1.125rem/1.75 var(--body)}
+a{color:var(--teal);text-underline-offset:3px}
+a:focus-visible,.btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px;border-radius:6px}
+.top{padding:18px 24px;max-width:1080px;margin:0 auto;font:700 1.15rem var(--display)}
+.top a{color:var(--ink);text-decoration:none}
+main{max-width:720px;margin:0 auto;padding:24px 24px 72px}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:1.1;letter-spacing:-.02em}
+h1{font-size:clamp(2.2rem,6vw,3.4rem);margin:12px 0 16px}
+h2{font-size:1.7rem;margin:44px 0 10px}
+h3{font-size:1.2rem;font-weight:700;margin:26px 0 6px;letter-spacing:-.01em}
+p{margin:0 0 16px}
+.lede{font-size:1.25rem;color:var(--ink2)}
+ul,ol{padding-left:1.3rem;margin:0 0 16px}li{margin:6px 0}
+.note{background:var(--white);border-radius:14px;padding:18px 20px;margin:28px 0}
+.cta{background:var(--ink);color:#e6eef0;border-radius:20px;padding:28px;margin:44px 0 0}
+.cta h2{color:#fff;margin:0 0 8px;font-size:1.6rem}
+.cta p{color:#c4d6da}
+.btn{display:inline-block;font:600 1.05rem var(--body);text-decoration:none;padding:14px 28px;border-radius:999px;background:var(--sun);color:var(--ink)}
+.btn:hover{background:var(--sun-deep)}
+.meta{color:var(--ink2);font-size:.95rem}
+footer{max-width:720px;margin:0 auto;padding:0 24px 48px;color:var(--ink2);font-size:.95rem}

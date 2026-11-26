@@ -68,7 +68,7 @@ fun FocusSessionCard() {
             ) { Text("End early") }
         } else {
             Text(
-                "Block your limited apps for a set time. It's added to your activity log when it ends.",
+                "Block your limited apps for a set time. It counts as productive time in your daily review.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

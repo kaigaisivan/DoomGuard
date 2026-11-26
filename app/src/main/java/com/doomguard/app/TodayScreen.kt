@@ -2,6 +2,7 @@
 
 package com.doomguard.app
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -50,12 +50,14 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun TodayScreen(pad: PaddingValues, goTo: (Int) -> Unit) {
     val ctx = LocalContext.current
+    val gate = rememberGuardianGate()
     val limits = rememberStore { Store.limitsToday() }
     val totalCap = rememberStore { Store.totalCapMin }
     val webOn = rememberStore { Store.webFilterActive() }
     val tasks = rememberStore { Store.tasksToday() }
     val acts = rememberStore { Store.activities().filter { it.day == today() } }
     val streak = rememberStore { Store.streak() }
+    val updateVersion = rememberStore { UpdateChecker.available(ctx) }
     val reflection = rememberStore { Store.reflection(today()) }
 
     var usage by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
@@ -110,7 +112,7 @@ fun TodayScreen(pad: PaddingValues, goTo: (Int) -> Unit) {
                 Section("Finish setup") {
                     Text(
                         "DoomGuard needs two permissions to work: Usage access (to see which app is open) " +
-                            "and Display over other apps (to show the pause screen)."
+                                "and Display over other apps (to show the pause screen)."
                     )
                     if (!usageOk) Button(onClick = { Perms.openUsage(ctx) }, modifier = Modifier.fillMaxWidth()) { Text("Grant usage access") }
                     if (!overlayOk) Button(onClick = { Perms.openOverlay(ctx) }, modifier = Modifier.fillMaxWidth()) { Text("Allow display over other apps") }
@@ -119,27 +121,10 @@ fun TodayScreen(pad: PaddingValues, goTo: (Int) -> Unit) {
         }
 
         item {
-            val q = Store.currentQuote
-            if (q != null) {
-                Section("Quote") {
-                    Text("“${q.text}”", style = MaterialTheme.typography.titleMedium, fontFamily = QuoteFont)
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("— ${q.author}", color = MaterialTheme.colorScheme.primary)
-                        IconButton(onClick = { Store.currentQuote = Quotes.pick(null, q.text) }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "New quote")
-                        }
-                    }
-                }
-            }
-        }
-
-        item { FocusSessionCard() }
-
-        item {
             Section("Streak") {
                 if (limits.isEmpty()) {
                     Text("Choose apps to limit and your streak of days under the limit starts counting.")
-                    OutlinedButton(onClick = { goTo(3) }) { Text("Choose apps") }
+                    OutlinedButton(onClick = { goTo(TAB_APPS) }) { Text("Choose apps") }
                 } else {
                     Text("${streak.first} day streak · best ${streak.second}", style = MaterialTheme.typography.titleMedium)
                     Text(
@@ -153,7 +138,7 @@ fun TodayScreen(pad: PaddingValues, goTo: (Int) -> Unit) {
 
         if (usageOk) {
             item {
-                Section("All apps today") {
+                Section("All apps today", modifier = Modifier.clickable { goTo(TAB_APPS) }) {
                     // The shared daily cap and weekend note used to live in a separate "Screen time today" card.
                     if (limits.isNotEmpty() && totalCap > 0) {
                         val totalUsed = limits.keys.sumOf { usage[it] ?: 0L }
@@ -182,9 +167,14 @@ fun TodayScreen(pad: PaddingValues, goTo: (Int) -> Unit) {
                             "${fmtDurationShort(allApps.sumOf { it.value })} across ${allApps.size} apps",
                             style = MaterialTheme.typography.titleMedium
                         )
+                        Text(
+                            "Tap the card to manage every app in the Apps tab.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         val shown = if (showAllApps) allApps else allApps.take(8)
                         shown.forEach { (pkg, ms) ->
-                            AppUsageRow(pkg, ms, ms.toFloat() / top, limits[pkg])
+                            AppUsageRow(pkg, ms, ms.toFloat() / top, limits[pkg], gate)
                         }
                         if (allApps.size > 8) {
                             TextButton(onClick = { showAllApps = !showAllApps }) {
@@ -196,6 +186,12 @@ fun TodayScreen(pad: PaddingValues, goTo: (Int) -> Unit) {
             }
         }
 
+        if (updateVersion != null) {
+            item { UpdateBanner(updateVersion) }
+        }
+
+        item { FocusSessionCard() }
+
         if (webOn) {
             item {
                 Section("Website filter") {
@@ -204,7 +200,7 @@ fun TodayScreen(pad: PaddingValues, goTo: (Int) -> Unit) {
                         Text("On. $blocked blocked ${if (blocked == 1) "attempt" else "attempts"} today.", color = MaterialTheme.colorScheme.primary)
                     } else {
                         Text("On, but not running right now.", color = MaterialTheme.colorScheme.error)
-                        OutlinedButton(onClick = { goTo(4) }) { Text("Open Settings to restart it") }
+                        OutlinedButton(onClick = { goTo(TAB_SETTINGS) }) { Text("Open Settings to restart it") }
                     }
                 }
             }
@@ -271,7 +267,6 @@ fun TodayScreen(pad: PaddingValues, goTo: (Int) -> Unit) {
                 OutlinedButton(onClick = { showReflect = true }) {
                     Text(if (reflection.isBlank()) "What are you proud of today?" else "Edit reflection")
                 }
-                OutlinedButton(onClick = { goTo(1) }) { Text("Open activity log") }
             }
         }
     }
@@ -286,7 +281,18 @@ fun TodayScreen(pad: PaddingValues, goTo: (Int) -> Unit) {
             confirmButton = {
                 TextButton(onClick = { Store.saveReflection(today(), draft.trim()); showReflect = false }) { Text("Save") }
             },
-            dismissButton = { TextButton(onClick = { showReflect = false }) { Text("Cancel") } }
+            dismissButton = {
+                Row {
+                    if (reflection.isNotBlank()) {
+                        TextButton(onClick = {
+                            Store.saveReflection(today(), "")
+                            draft = ""
+                            showReflect = false
+                        }) { Text("Delete") }
+                    }
+                    TextButton(onClick = { showReflect = false }) { Text("Cancel") }
+                }
+            }
         )
     }
 }

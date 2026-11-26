@@ -117,6 +117,8 @@ details p{margin:10px 0 0;color:var(--ink2)}
 .limits{padding:72px 0}
 .limits p{font-size:1.1rem}
 .cta{padding:24px 0 88px;text-align:left}
+.contact{background:var(--white);padding:64px 0}
+.contact .actions{margin-top:20px}
 .cta h2{margin-bottom:22px}
 footer{background:var(--ink);color:#b9ccd2;padding:36px 0;font-size:.95rem}
 footer a{color:#fff}
@@ -174,7 +176,7 @@ footer p{margin:0;max-width:none}
         <figcaption><h3>Choose your apps</h3><p>Turn on the ones you want limited and set minutes per day, with different limits for weekends.</p></figcaption>
       </figure>
       <figure>
-        <div class="phone"><img src="screenshots/today.png" alt="Today screen with a quote and a focus session" loading="lazy"></div>
+        <div class="phone"><img src="screenshots/today.png" alt="Today screen with a focus session" loading="lazy"></div>
         <figcaption><h3>Go about your day</h3><p>Start a focus session, or glance at where your time went. A warning arrives before you hit the limit.</p></figcaption>
       </figure>
       <figure>
@@ -204,7 +206,6 @@ footer p{margin:0;max-width:none}
       <ul>
         <li>Overrides and permission changes are written to a log you can read.</li>
         <li>Optional uninstall protection stops the app being removed on a whim.</li>
-        <li>A few emergency exits a day, for calls and things that can't wait.</li>
       </ul>
     </div>
   </div>
@@ -257,6 +258,14 @@ footer p{margin:0;max-width:none}
   </div>
 </section>
 
+<section class="limits" style="padding-top:0">
+  <div class="wrap">
+    <h2>Guides</h2>
+    <p>Practical reading, whether or not you install the app.</p>
+    <p><a href="guides/how-to-stop-doom-scrolling.html">How to stop doom scrolling</a><br><a href="guides/how-to-quit-porn.html">How to quit porn</a></p>
+  </div>
+</section>
+
 <section class="cta">
   <div class="wrap">
     <h2>Take your time back.</h2>
@@ -265,9 +274,24 @@ footer p{margin:0;max-width:none}
 </section>
 </main>
 
+<section class="contact" id="contact">
+  <div class="wrap">
+    <h2>Questions or feedback?</h2>
+    <p>Found a bug or have an idea? Report it on <a href="https://github.com/kaigaisivan/DoomGuard/issues">GitHub</a>, or message me directly. Please don't send private details about your own struggles. I can only help with the app.</p>
+    <div class="actions">
+      <a class="btn plain" href="https://wa.me/254790129480?text=Hi%20Simon%2C%20I%27m%20writing%20about%20DoomGuard.">WhatsApp</a>
+      <a class="btn plain" href="https://x.com/SimonSivan6">X (Twitter)</a>
+      <a class="btn plain" id="mail" href="#contact">Email</a>
+    </div>
+  </div>
+</section>
+<script>
+(function(){var u="simonmaina2468",d="gmail.com",a=document.getElementById("mail");if(a){a.href="mailto:"+u+"@"+d+"?subject=DoomGuard";}})();
+</script>
+
 <footer>
   <div class="wrap">
-    <p><a href="privacy.html">Privacy</a> &nbsp; <a href="https://github.com/kaigaisivan/DoomGuard">Source code</a> &nbsp; <a href="https://github.com/kaigaisivan/DoomGuard/issues">Report a problem</a></p>
+    <p><a href="privacy.html">Privacy</a> &nbsp; <a href="#contact">Contact</a> &nbsp; <a href="guides/how-to-stop-doom-scrolling.html">Guides</a> &nbsp; <a href="https://github.com/kaigaisivan/DoomGuard">Source code</a> &nbsp; <a href="https://github.com/kaigaisivan/DoomGuard/issues">Report a problem</a></p>
     <p>Adult-site list derived from <a href="https://github.com/StevenBlack/hosts">StevenBlack/hosts</a> under the MIT licence.</p>
   </div>
 </footer>
