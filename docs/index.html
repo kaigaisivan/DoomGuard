@@ -65,8 +65,6 @@ p{margin:0 0 14px;max-width:62ch}
 @keyframes breathe{0%,100%{transform:scale(.72)}50%{transform:scale(1)}}
 @keyframes fadeIn{0%,45%{opacity:1}50%,95%{opacity:0}100%{opacity:1}}
 @keyframes fadeOut{0%,45%{opacity:0}50%,95%{opacity:1}100%{opacity:0}}
-.live blockquote{margin:0 0 20px;font:italic 1.02rem/1.5 Georgia,"Times New Roman",serif;color:#f2f4f8}
-.live blockquote cite{display:block;margin-top:8px;font:normal .85rem var(--body);color:var(--sun)}
 .live .try{width:100%;background:#1f232b;border-radius:14px;padding:12px 14px;text-align:left;margin-bottom:14px}
 .live .try small{display:block;color:var(--sun);font-size:.78rem}
 .live .go{width:100%;background:var(--sun);color:#2a1d05;font-weight:600;border-radius:999px;padding:12px;font-size:.95rem}
@@ -84,8 +82,7 @@ p{margin:0 0 14px;max-width:62ch}
 /* One loud band */
 .band{background:var(--teal-deep);color:#e9f2f3;padding:88px 0}
 .band .wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
-.band blockquote{margin:0;font:700 clamp(2rem,4.6vw,3.2rem)/1.12 var(--display);letter-spacing:-.02em;color:#fff}
-.band blockquote cite{display:block;margin-top:18px;font:500 1rem var(--body);letter-spacing:0;color:var(--sun)}
+.band .big{margin:0;font:700 clamp(2rem,4.6vw,3.2rem)/1.12 var(--display);letter-spacing:-.02em;color:#fff}
 .band p{color:#c6dadd}
 .band h2{color:#fff;font-size:clamp(1.6rem,3.4vw,2.2rem)}
 
@@ -150,13 +147,12 @@ footer p{margin:0;max-width:none}
       <p class="fine">Free, for Android 8 and newer. No account, no ads. Everything stays on your phone.</p>
     </div>
 
-    <div class="phone" role="img" aria-label="The DoomGuard pause screen: a breathing circle, a quote and a button to close the app">
+    <div class="phone" role="img" aria-label="The DoomGuard pause screen: a breathing circle, a few better ideas and a button to close the app">
       <div class="live">
         <h2>Instagram is paused</h2>
         <p class="sub">You've used your 30 minutes today.</p>
         <div class="ring"><span class="in">Breathe in</span><span class="out">Breathe out</span></div>
-        <blockquote>“While we are postponing, life speeds by.”<cite>Seneca</cite></blockquote>
-        <div class="try"><small>Instead, try</small>Write down what you're avoiding</div>
+        <div class="try"><small>Instead, try</small>• Finish the report for Monday<br>• Make a hot drink<br>• Write tomorrow's top task on paper</div>
         <div class="go">Close it and go home</div>
       </div>
     </div>
@@ -181,7 +177,7 @@ footer p{margin:0;max-width:none}
       </figure>
       <figure>
         <div class="phone"><img src="screenshots/pause.png" alt="Pause screen shown over a locked app" loading="lazy"></div>
-        <figcaption><h3>Meet the pause</h3><p>A breathing circle, a thought about the choice you're making, and something better to do.</p></figcaption>
+        <figcaption><h3>Meet the pause</h3><p>A breathing circle, then a few better ideas: your own list from Today, and small things that fit the time of day.</p></figcaption>
       </figure>
     </div>
   </div>
@@ -189,10 +185,10 @@ footer p{margin:0;max-width:none}
 
 <section class="band">
   <div class="wrap">
-    <blockquote>“How we spend our days is, of course, how we spend our lives.”<cite>Annie Dillard</cite></blockquote>
+    <p class="big">Scrolling stops being automatic when it takes a decision.</p>
     <div>
-      <h2>A pause built to make you think</h2>
-      <p>Every pause screen shows a line chosen to question the habit, not to scold you. Extra time is possible, but it comes in small pieces, with a wait before each one, and then the app locks for the day.</p>
+      <h2>A pause that gives you a choice</h2>
+      <p>The pause screen doesn't scold you. It makes you stop for a few breaths and suggests better things to do, starting with what you planned for today. Extra time is possible, but it comes in small pieces, with a wait before each one, and then the app locks for the day.</p>
     </div>
   </div>
 </section>
